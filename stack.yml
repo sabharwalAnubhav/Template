@@ -1,0 +1,94 @@
+Resources:
+#Creating Ec2 Instance
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      #Add your own AMI id      
+      ImageId: ami-005bdb005fb00e791
+      #Add your own key Name
+      KeyName: mynewKeyPair
+      SecurityGroups:
+        - !Ref SecurityGroup
+      UserData: 
+        Fn::Base64: !Sub |
+           #!/bin/bash
+           # Installing docker & Python on host machine
+           apt-get update
+           apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+           curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+           add-apt-repository \
+              "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+              $(lsb_release -cs) \
+              stable"
+           apt-get update
+           apt-get install -y docker-ce
+           add-apt-repository ppa:jonathonf/python-3.6
+           apt-get install -y python          
+           # Script for UDP server messages
+           echo "import socket
+           sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)# For UDP
+           udp_host = socket.gethostname() # Host IP
+           udp_port = 5005 # specified port to connect
+           sock.bind((udp_host,udp_port,udp_time))
+              while True:
+                  print ("Waiting for client...")
+                  data,addr = sock.recvfrom(1024) #receive data from client
+                  print ("Received Messages:",data," from",addr)" > /tmp/udpserver.py
+           python /tmp/udpserver.py           
+           # Script for UDP client (docker container) output
+           echo "import socket 
+           sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM) # For UDP 
+           udp_host = socket.gethostname() # Host IP 
+           udp_port = 5005 # specified port to connect
+           udp_time = socket.time.Clock()
+           msg = "Hello this is client !".encode()
+           print ("UDP target IP:", udp_host) 
+           print ("UDP target Port:", udp_port)
+           print ("UDP timestamp:", udp_time) 
+           sock.sendto(msg,(udp_time,udp_host,udp_port))" > /tmp/udpclient.py
+           # Creating docker image and conatiner
+           echo "FROM ubuntu
+                 RUN add-apt-repository ppa:jonathonf/python-3.6
+                 RUN apt-get install python
+                 cmd ["python","udpclient.py"]" > /tmp/dockerfile
+           docker create -v /home/ubuntu:/docker --name docker ubuntu
+  # Security Group for EC2 Instance
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: For the app nodes that allow ssh, http and docker ports
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: 0.0.0.0/0
+  #Setting up Alarm related to Health Check of the system
+  CloudWatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Network HealtCheck
+      AlarmActions: 
+         - !Ref Topic
+      AlarmName: StatusCheck
+      ComparisonOperator: GreaterThanThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 2
+      Namespace: AWS/EC2     
+      MetricName: StatusCheckFailed_Instance
+      Period: 300
+      Statistic: Average
+      Threshold: 2.0
+      TreatMissingData: missing
+# Creating Notification if something goes wrong
+  Topic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: Status Check Alert
+      TopicName: Status_Check
+  MySubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: anubhavsabharwal6@gmail.com
+      Protocol: email
+      TopicArn: !Ref 'Topic'
