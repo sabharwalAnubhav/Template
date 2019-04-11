@@ -20,4 +20,4 @@ Pre-requisites to run CloudFormation template :
     -> run the python script available at /tmp/udpclient.py to send message to server.
 
 
-We can make this process more efficient by other tools like Ansible.The scripts for parsing the data can be created in more customized.I'm stuck for getting containerId and timestamp in message output however, I have found the way to get it and will be done soon. 
+We can make this process more efficient by adding other tools while provisioning like Ansible.The scripts for parsing the data can be created in more customized.I'm stuck for getting containerId and timestamp in message output however, I have found the way to get it and will be done soon. 
