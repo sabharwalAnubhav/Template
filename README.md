@@ -18,3 +18,6 @@ Pre-requisites to run CloudFormation template :
     
     -> docker start -a containerID or docker attach containerID or docker exec -it containerID /bin/bash  
     -> run the python script available at /tmp/udpclient.py to send message to server.
+
+
+We can make this process more efficient by other tools like Ansible.The scripts for parsing the data can be created in more customized.I'm stuck for getting containerId and timestamp in message output however, I have found the way to get it and will be done soon. 
